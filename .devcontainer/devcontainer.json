@@ -26,5 +26,5 @@
 			]
 		}
 	},
-	"postStartCommand": "bash -c 'R_PATH=\"PATH=$PATH\"; echo $R_PATH >> /home/rstudio/.Renviron; for var in CODESPACE_NAME CODESPACES GITHUB_TOKEN GITHUB_USER GITHUB_SERVER_URL; do val=$(printenv $var); [ -n \"$val\" ] && echo \"$var=$val\" >> /home/rstudio/.Renviron; done'"
+	"postStartCommand": "bash -c 'R_PATH=\"PATH=$PATH\"; echo $R_PATH >> /home/rstudio/.Renviron; for var in CODESPACE_NAME CODESPACES GITHUB_TOKEN GITHUB_USER GITHUB_SERVER_URL GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN; do val=$(printenv $var); [ -n \"$val\" ] && echo \"$var=$val\" >> /home/rstudio/.Renviron; done; mkdir -p /home/rstudio/.jupyter; cat > /home/rstudio/.jupyter/jupyter_server_config.py <<\"PY\"\nimport os\nimport jupyter_rsession_proxy\nfrom urllib.parse import urlparse, urlunparse\n\ndef fix(response, request):\n    name=os.environ.get(\"CODESPACE_NAME\")\n    domain=os.environ.get(\"GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN\", \"app.github.dev\")\n    host=f\"{name}-8888.{domain}\" if name else request.host\n    for h,v in list(response.headers.get_all()):\n        if h.lower()==\"location\":\n            p=urlparse(v)\n            path=p.path if p.path.startswith(\"/rstudio\") else \"/rstudio\"+p.path\n            response.headers[h]=urlunparse((\"https\", host, path, \"\", p.query, p.fragment))\n\njupyter_rsession_proxy.rewrite_netloc = fix\nPY'"
 }
